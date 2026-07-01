@@ -1,34 +1,35 @@
 #pragma once
 #include <functional>
+#include <memory>
 
 template <typename T>
 class List {
 protected:
     class Node {
     public:
-        T     data;
-        Node* prev = nullptr;
-        Node* next = nullptr;
+        T                     data;
+        std::shared_ptr<Node> next;
+        std::weak_ptr<Node>   prev;
         Node() = default;
         explicit Node(const T& d) : data(d) {}
     };
 
-    Node* head = nullptr;
-    Node* tail = nullptr;
+    using NodePtr = std::shared_ptr<Node>;
+
+    NodePtr head;
+    NodePtr tail;
 
     void deleteListContents() {
-        Node* current = head;
-        while (current != nullptr) {
-            Node* temp = current->next;
-            delete current;
-            current = temp;
+        while (head) {
+            NodePtr nxt = head->next;
+            head->next.reset();
+            head = nxt;
         }
-        head = nullptr;
-        tail = nullptr;
+        tail.reset();
     }
 
     void copyFrom(const List& rhs) {
-        for (Node* curr = rhs.head; curr != nullptr; curr = curr->next) {
+        for (NodePtr curr = rhs.head; curr; curr = curr->next) {
             push_back(curr->data);
         }
     }
@@ -52,20 +53,14 @@ public:
         return *this;
     }
 
-    List(List&& rhs) {
-        head = rhs.head;
-        tail = rhs.tail;
-        rhs.head = nullptr;
-        rhs.tail = nullptr;
-    }
+    List(List&& rhs) noexcept
+        : head(std::move(rhs.head)), tail(std::move(rhs.tail)) {}
 
-    List& operator=(List&& rhs) {
+    List& operator=(List&& rhs) noexcept {
         if (this != &rhs) {
             deleteListContents();
-            head = rhs.head;
-            tail = rhs.tail;
-            rhs.head = nullptr;
-            rhs.tail = nullptr;
+            head = std::move(rhs.head);
+            tail = std::move(rhs.tail);
         }
         return *this;
     }
@@ -79,8 +74,8 @@ public:
     }
 
     void push_front(T data) {
-        Node* newNode = new Node(data);
-        if (head == nullptr) {
+        NodePtr newNode = std::make_shared<Node>(data);
+        if (!head) {
             head = newNode;
             tail = newNode;
         } else {
@@ -91,8 +86,8 @@ public:
     }
 
     void push_back(T data) {
-        Node* newNode = new Node(data);
-        if (tail == nullptr) {
+        NodePtr newNode = std::make_shared<Node>(data);
+        if (!tail) {
             head = newNode;
             tail = newNode;
         } else {
@@ -119,34 +114,30 @@ public:
     }
 
     void pop_front() {
-        if (head == nullptr) return;
-        Node* firstNode = head;
+        if (!head) return;
         head = head->next;
-        if (head == nullptr) {
-            tail = nullptr;
+        if (!head) {
+            tail.reset();
         } else {
-            head->prev = nullptr;
+            head->prev.reset();
         }
-        delete firstNode;
     }
 
     void pop_back() {
-        if (tail == nullptr) return;
-        Node* lastNode = tail;
-        tail = tail->prev;
-        if (tail == nullptr) {
-            head = nullptr;
+        if (!tail) return;
+        NodePtr prev = tail->prev.lock();
+        if (!prev) {
+            head.reset();
+            tail.reset();
         } else {
-            tail->next = nullptr;
+            prev->next.reset();
+            tail = prev;
         }
-        delete lastNode;
     }
 
     void traverse(std::function<void(T&)> doIt) {
-        Node* current = head;
-        while (current != nullptr) {
+        for (NodePtr current = head; current; current = current->next) {
             doIt(current->data);
-            current = current->next;
         }
     }
 };

@@ -8,23 +8,23 @@ public:
     using List<T>::traverse;
 
     void traverse(int startIndex, std::function<void(T&)> doIt) {
-        if (this->head == nullptr) {
+        if (!this->head) {
             return;
         }
 
-        typename List<T>::Node* start = this->head;
-        for (int i = 0; i < startIndex && start != nullptr; ++i) {
+        typename List<T>::NodePtr start = this->head;
+        for (int i = 0; i < startIndex && start; ++i) {
             start = start->next;
         }
-        if (start == nullptr) {
+        if (!start) {
             start = this->head;
         }
 
-        typename List<T>::Node* current = start;
+        typename List<T>::NodePtr current = start;
         do {
             doIt(current->data);
             current = current->next;
-            if (current == nullptr) {
+            if (!current) {
                 current = this->head;
             }
         } while (current != start);
