@@ -6,6 +6,7 @@
 #include <initializer_list>
 #include <ostream>
 #include <queue>
+#include <list>
 
 template<typename T>
 class Tree
@@ -49,6 +50,10 @@ public:
     }
 
     bool isEmpty() const { return !_root; }
+
+    bool isLeaf() const {
+        return !isEmpty() && left().isEmpty() && right().isEmpty();
+    }
 
     size_t size() const {
         if (isEmpty()) return 0;
@@ -180,4 +185,22 @@ Tree<T> prune(const Tree<T>& tree) {
     if (tree.left().isEmpty() && tree.right().isEmpty())
         return Tree<T>();
     return Tree<T>(prune(tree.left()), tree.root(), prune(tree.right()));
+}
+
+template <typename T>
+std::list<T> fringe(const Tree<T>& tree) {
+    std::list<T> leaves;
+    std::function<void(const Tree<T>&)> collect = [&](const Tree<T>& t) {
+        if (t.isEmpty()) return;
+        if (t.isLeaf()) { leaves.push_back(t.root()); return; }
+        collect(t.left());
+        collect(t.right());
+    };
+    collect(tree);
+    return leaves;
+}
+
+template <typename T>
+bool hasSameFringe(const Tree<T>& a, const Tree<T>& b) {
+    return fringe(a) == fringe(b);
 }
